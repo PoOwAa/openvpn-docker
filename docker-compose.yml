@@ -44,7 +44,6 @@ services:
       - WG_HOST=vpn.andyrum.com
       - PASSWORD_HASH=$2a$12$pvxELQk0CUnmKGxVKIIZ7Onmopwe.W9KuEw9X8ZASXwPA/hxZhtg.
     ports:
-      - "51820:51820/udp"
       - "51821:51821/tcp"
     sysctls:
       - net.ipv4.ip_forward=1

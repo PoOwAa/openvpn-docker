@@ -6,10 +6,10 @@ services:
     container_name: openvpn
     cap_add:
       - NET_ADMIN
+    ports:
+      - "7777:1194/udp" # Maps container's 1194 (OpenVPN) to host's 7777
     volumes:
       - ovpn-data:/etc/openvpn
-    ports:
-      - "1194:1194/udp"
     deploy:
       replicas: 1
       restart_policy:
@@ -28,16 +28,22 @@ services:
     depends_on:
       - openvpn
     environment:
-      OVPN_ADMIN_OPENVPN_HOST: "openvpn"
-      OVPN_ADMIN_OPENVPN_MGMT_PORT: "5555"
-      OVPN_ADMIN_OPENVPN_MGMT_USER_FILE: /run/secrets/OVPN_ADMIN_OPENVPN_MGMT_USER
-      OVPN_ADMIN_OPENVPN_MGMT_PASSWORD_FILE: /run/secrets/OVPN_ADMIN_OPENVPN_MGMT_PASSWORD
-      OVPN_ADMIN_STORAGE: "json"
-      OVPN_ADMIN_JSON_PATH: "/data/clients.json"
-    secrets:
-      - OVPN_ADMIN_OPENVPN_MGMT_USER
-      - OVPN_ADMIN_OPENVPN_MGMT_PASSWORD
+      OVPN_DEBUG: "true"
+      OVPN_VERBOSE: "true"
+      OVPN_NETWORK: "192.168.100.0/24"
+      OVPN_CCD: "true"
+      OVPN_CCD_PATH: "/mnt/ccd"
+      EASYRSA_PATH: "/mnt/easyrsa"
+      # In Swarm, instead of network_mode, we reference the OpenVPN service by its DNS name.
+      OVPN_SERVER: "openvpn:1194"
+      OVPN_INDEX_PATH: "/mnt/easyrsa/pki/index.txt"
+      OVPN_AUTH: "true"
+      OVPN_AUTH_DB_PATH: "/mnt/easyrsa/pki/users.db"
+      LOG_LEVEL: "debug"
     volumes:
+      # Mount the same ovpn-data volume to supply the admin panel with the easyrsa and CCD data.
+      - ovpn-data:/mnt/easyrsa
+      - ovpn-data:/mnt/ccd
       - openvpn-admin-data:/data
     ports:
       - "8080:8080"
@@ -64,10 +70,4 @@ volumes:
 
 networks:
   public:
-    external: true
-
-secrets:
-  OVPN_ADMIN_OPENVPN_MGMT_USER:
-    external: true
-  OVPN_ADMIN_OPENVPN_MGMT_PASSWORD:
     external: true

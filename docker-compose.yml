@@ -41,7 +41,7 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     environment:
-      - WG_HOST=vpn.andyrum.com
+      - WG_HOST=wireguard
       - PASSWORD_HASH=$2a$12$pvxELQk0CUnmKGxVKIIZ7Onmopwe.W9KuEw9X8ZASXwPA/hxZhtg.
     ports:
       - "51821:51821/tcp"
@@ -59,7 +59,7 @@ services:
         window: 120s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wg-easy.rule=Host(`vpn.andyrum.com`)"
+      - "traefik.http.routers.wg-easy.rule=Host(`vpnadmin.andyrum.com`)"
       - "traefik.http.routers.wg-easy.entrypoints=websecure"
       - "traefik.http.services.wg-easy.loadbalancer.server.port=51821"
       - "traefik.http.routers.wg-easy.service=wg-easy"

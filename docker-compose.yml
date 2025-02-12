@@ -3,8 +3,6 @@ version: "3.8"
 services:
   wireguard:
     image: linuxserver/wireguard
-    container_name: wireguard
-    privileged: true
     cap_add:
       - NET_ADMIN
       - SYS_MODULE

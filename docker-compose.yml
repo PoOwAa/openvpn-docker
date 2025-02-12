@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  openvpn:
+    image: kylemanna/openvpn
+    container_name: openvpn
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ovpn-data:/etc/openvpn
+    ports:
+      - "1194:1194/udp"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "traefik.enable=false"
+    networks:
+      - public
+
+  openvpn-admin:
+    image: flant/openvpn-admin
+    container_name: openvpn-admin
+    depends_on:
+      - openvpn
+    environment:
+      OVPN_ADMIN_OPENVPN_HOST: "openvpn"
+      OVPN_ADMIN_OPENVPN_MGMT_PORT: "5555"
+      OVPN_ADMIN_OPENVPN_MGMT_USER: /run/secrets/OVPN_ADMIN_OPENVPN_MGMT_USER
+      OVPN_ADMIN_OPENVPN_MGMT_PASSWORD: /run/secrets/OVPN_ADMIN_OPENVPN_MGMT_PASSWORD
+      OVPN_ADMIN_STORAGE: "json"
+      OVPN_ADMIN_JSON_PATH: "/data/clients.json"
+    secrets:
+      - OVPN_ADMIN_OPENVPN_MGMT_USER
+      - OVPN_ADMIN_OPENVPN_MGMT_PASSWORD
+    volumes:
+      - openvpn-admin-data:/data
+    ports:
+      - "8080:8080"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.openvpn-admin.rule=Host(`vpn.andyrum.com`)"
+        - "traefik.http.routers.openvpn-admin.entrypoints=websecure"
+        - "traefik.http.services.openvpn-admin.loadbalancer.server.port=8080"
+        - "traefik.http.routers.openvpn-admin.service=openvpn-admin"
+        - "traefik.http.routers.openvpn-admin.tls.certresolver=leresolver"
+    networks:
+      - public
+
+volumes:
+  ovpn-data:
+  openvpn-admin-data:
+
+networks:
+  public:
+    external: true
+
+secrets:
+  OVPN_ADMIN_OPENVPN_MGMT_USER:
+    external: true
+  OVPN_ADMIN_OPENVPN_MGMT_PASSWORD:
+    external: true

@@ -1,21 +1,34 @@
 version: "3.8"
 
 services:
-  openvpn:
-    image: kylemanna/openvpn
-    container_name: openvpn
+  wireguard:
+    image: linuxserver/wireguard
+    container_name: wireguard
     privileged: true
     cap_add:
       - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - SERVERURL=vpn.andyrum.com
+      - SERVERPORT=51820
+      - PEERS=5
+      - PEERDNS=8.8.8.8
+      - INTERNAL_SUBNET=10.13.13.0 # Internal VPN range
     volumes:
-      - ovpn-data:/etc/openvpn
-    # Expose the OpenVPN port (for client connections) as usual.
+      - wireguard-data:/config
+      - /lib/modules:/lib/modules:ro
     ports:
-      - "1194:1194/udp"
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.forwarding=1
+      - net.ipv6.conf.all.forwarding=1
     deploy:
       replicas: 1
       restart_policy:
-        condition: on-failure
+        condition: unless-stopped
         delay: 5s
         max_attempts: 3
         window: 120s
@@ -24,58 +37,8 @@ services:
     networks:
       - public
 
-  openvpn-admin:
-    image: flant/openvpn-admin
-    container_name: openvpn-admin
-    depends_on:
-      - openvpn
-    environment:
-      # Debug and verbose logging for troubleshooting
-      OVPN_DEBUG: "true"
-      OVPN_VERBOSE: "true"
-      # The VPN network as seen by OpenVPN
-      OVPN_NETWORK: "192.168.100.0/24"
-      # Enable CCD support and point to its path (we assume CCD files are in the “ccd” subfolder)
-      OVPN_CCD: "true"
-      OVPN_CCD_PATH: "/mnt/easyrsa/ccd"
-      # Path to the easyrsa (PKI) data. In kylemanna/openvpn, this is under /etc/openvpn
-      EASYRSA_PATH: "/mnt/easyrsa"
-      # Point to the management interface of the OpenVPN container.
-      # Our init script should have added “management 0.0.0.0 5555” to openvpn.conf.
-      OVPN_SERVER: "openvpn:5555"
-      # Path to the OpenVPN index file
-      OVPN_INDEX_PATH: "/mnt/easyrsa/pki/index.txt"
-      # Enable authentication via the PKI (users.db will be created/used)
-      OVPN_AUTH: "true"
-      OVPN_AUTH_DB_PATH: "/mnt/easyrsa/pki/users.db"
-      # Set log level to debug for troubleshooting
-      LOG_LEVEL: "debug"
-    volumes:
-      # Mount the ovpn-data volume at /mnt/easyrsa so the admin panel can read the PKI and (if present) CCD files.
-      - ovpn-data:/mnt/easyrsa
-      - openvpn-admin-data:/data
-    ports:
-      - "8080:8080"
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.openvpn-admin.rule=Host(`vpn.andyrum.com`)"
-        - "traefik.http.routers.openvpn-admin.entrypoints=websecure"
-        - "traefik.http.services.openvpn-admin.loadbalancer.server.port=8080"
-        - "traefik.http.routers.openvpn-admin.service=openvpn-admin"
-        - "traefik.http.routers.openvpn-admin.tls.certresolver=leresolver"
-    networks:
-      - public
-
 volumes:
-  ovpn-data:
-  openvpn-admin-data:
+  wireguard-data:
 
 networks:
   public:

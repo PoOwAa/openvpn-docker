@@ -64,6 +64,8 @@ services:
       - "traefik.http.services.wg-easy.loadbalancer.server.port=51821"
       - "traefik.http.routers.wg-easy.service=wg-easy"
       - "traefik.http.routers.wg-easy.tls.certresolver=leresolver"
+    networks:
+      - public
 
 volumes:
   wireguard-data:
